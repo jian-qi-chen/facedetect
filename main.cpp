@@ -1,7 +1,7 @@
 //============================================================================================
 // 
 // File Name    : main.cpp
-// Description  : Fae detector top system description
+// Description  : Face detector top system description
 // Release Date : 25/03/2019
 // Author       : Jianqi Chen, Benjamin Carrion Schafer
 //
