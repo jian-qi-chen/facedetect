@@ -3,6 +3,6 @@ This is a synthesizable face detector in SystemC using Viola-Jones algorithm, te
 	$ ./facedetect.exe
 
 The files needed for high-level synthesis:
-	facedetect.cpp, facedetect.h, define.h, rectangles_array.dat, stages_array.dat, stages_thresh_array.dat, tree_thresh_array, weight_array.dat, alpha1_array.dat, alpha2_array.dat
+	facedetect.cpp, facedetect.h, define.h, rectangles_array.dat, stages_array.dat, stages_thresh_array.dat, tree_thresh_array.dat, weight_array.dat, alpha1_array.dat, alpha2_array.dat
 
 The code was originally written by Francesco Comaschi in pure C++ (https://sites.google.com/site/5kk73gpu2012/assignment/viola-jones-face-detection). A copy of the original source code is kept in the 'Cosmashi_original' directory.
