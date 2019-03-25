@@ -51,12 +51,11 @@ inline  int  myRound( sc_ufixed<16,12,SC_RND,SC_SAT> value )
  ******************************************************/
 
 void facedetect::detectObjects( MySize minSize,
-				   sc_ufixed<8,1,SC_RND,SC_SAT> scaleFactor, int minNeighbors)
+				   sc_ufixed<8,1,SC_RND,SC_SAT> scaleFactor, int minNeighbors, int shift_step)
 {
 
     /* group overlaping windows */
     const sc_ufixed<8,1,SC_RND,SC_SAT> GROUP_EPS = 0.4;
-    int i;
     int iter_counter = 0;
 
     /* scaling factor */
@@ -65,12 +64,9 @@ void facedetect::detectObjects( MySize minSize,
     /* window size of the training set */
     MySize winSize0 = cascadeObj.orig_window_size;
 
-    /* initial scaling factor */
-    factor = 1;
-
     /* iterate over the image pyramid */
     face_number = 0;
-    for( i=0; i<MAX_ITER; i++ )
+    for( factor = 1; ; factor *= scaleFactor)
     {
         /* iteration counter */
         iter_counter++;
@@ -81,6 +77,10 @@ void facedetect::detectObjects( MySize minSize,
         /* size of the image scaled down (from bigger to smaller) */
         MySize sz = { ( IMAGE_WIDTH/factor ), ( IMAGE_HEIGHT/factor ) };
 
+        /* break if the scale downed image is smaller than the window */
+        if( sz.width < 24 || sz.height < 24 )
+            break;
+        
         /* if a minSize different from the original detection window is specified, continue to the next scaling */
         if( winSize.width < minSize.width || winSize.height < minSize.height )
             continue;
@@ -115,9 +115,8 @@ void facedetect::detectObjects( MySize minSize,
         * Process the current scale with the cascaded fitler.
         * The main computations are invoked by this function.
         ***************************************************/
-        ScaleImage_Invoker( factor, sz.height, sz.width);
+        ScaleImage_Invoker( factor, sz.height, sz.width, shift_step);
         
-        factor *= scaleFactor;
     } /* end of the factor loop, finish all scales in pyramid*/
 
     if( minNeighbors != 0)
@@ -368,7 +367,7 @@ int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width, in
 }
 
 
-void facedetect::ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_row, int sum_col)
+void facedetect::ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_row, int sum_col, int shift_step)
 {
 
     MyPoint p;
@@ -400,7 +399,7 @@ void facedetect::ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int s
     * The step size is set to 1 here.
     * i.e., shift the filter window by 1 pixel.
     *******************************************/
-    step = 1;
+    step = shift_step;
 
     for( x = 0; x <= x2-1; x += step )
         for( y = y1; y <= y2-1; y += step )
@@ -691,8 +690,7 @@ void facedetect::detection_main()
     cascadeObj.n_stages=25;                   //number of strong classifier stages
 //    cascadeObj.total_nodes=2913;              //number of total weak classifier notes in the cascade
     cascadeObj.orig_window_size.height = 24;  //original window height
-    cascadeObj.orig_window_size.width = 24;   //original window width
-    scaleFactor= SCALE_FACTOR; 
+    cascadeObj.orig_window_size.width = 24;   //original window width 
     minNeighbours = 1;
     minSize.height = 20;
     minSize.width = 20;
@@ -714,8 +712,10 @@ void facedetect::detection_main()
             wait();
             continue;
         }
-
-        detectObjects(minSize, scaleFactor, minNeighbours);
+        
+        scaleFactor = scaleFactor_in.read();
+        shiftStep = shiftStep_in.read();
+        detectObjects(minSize, scaleFactor, minNeighbours, shiftStep);
         
         ready.write(1);
         face_num_out.write(face_number);

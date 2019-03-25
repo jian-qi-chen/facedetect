@@ -9,7 +9,8 @@ SRCS	=  \
 HDRS	=  \
 	tb_facedetect.h \
 	image.h \
-	facedetect.h
+	facedetect.h \
+	define.h
 
 ifneq (, $(wildcard /bin/uname))
 CPU_ARCH = $(shell /bin/uname -m)
@@ -68,7 +69,10 @@ $(TARGET) : $(OBJS)
 	$(LINKER) -o "$@" $(LDFLAGS) $(OBJS) $(LIBS)
 
 debug: $(OBJS)
-	$(LINKER) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS) $(DEBUG)
+	$(LINKER) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS)
+	
+wave:  $(OBJS) 
+	$(LINKER) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS)
 
 image.o: image.cpp $(HDRS)
 	$(CC) $(CFLAGS) $(CWB_SC_INCL) $(INCL) -c $< -o $@
@@ -83,4 +87,4 @@ tb_facedetect.o: tb_facedetect.cpp $(HDRS)
 	$(CC) $(CFLAGS) $(CWB_SC_INCL) $(INCL) -c $< -o $@
 
 clean:
-	rm -f *.o Output.pgm $(TARGET)
+	rm -f *.o Output.pgm *.vcd $(TARGET)

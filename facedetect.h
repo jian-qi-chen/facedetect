@@ -26,11 +26,14 @@ SC_MODULE (facedetect){
     sc_in<bool> write_signal; // burst write valid signal
     sc_in<bool> read_signal; // burst read valid signal
     sc_in<sc_uint<8> > in_data[4]; //for the case using 32bit bus
+    sc_in<sc_ufixed<8,1,SC_RND,SC_SAT> > scaleFactor_in; // scale factor for image down-sampling
+    sc_in<sc_uint<8> > shiftStep_in; // pixel step for window shifting
     sc_out<sc_uint<OUT_BW> > out_data[4]; //(x,y,w,h) coordinate, bitwidth need to be changed for larger image size
     sc_out<sc_uint<8> > face_num_out;
     sc_out<bool> ready;
     
     sc_ufixed<8,1,SC_RND,SC_SAT> scaleFactor; 
+    sc_uint<8> shiftStep;
     int minNeighbours;
     MySize minSize; 
 
@@ -59,7 +62,7 @@ SC_MODULE (facedetect){
     
     int predicate(sc_ufixed<8,1,SC_RND,SC_SAT> eps, sc_uint<OUT_BW> r1[4], sc_uint<OUT_BW> r2[4]);
     
-    void ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_row, int sum_col);
+    void ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_row, int sum_col, int shift_step);
     
     int evalWeakClassifier(int variance_norm_factor, int p_offset, int tree_index, int w_index, int r_index );
     
@@ -67,7 +70,7 @@ SC_MODULE (facedetect){
     
     void nearestNeighbor ( sc_uint<8> dst[IMAGE_HEIGHT][IMAGE_WIDTH], int width, int height);
 
-    void detectObjects(MySize minSize, sc_ufixed<8,1,SC_RND,SC_SAT> scale_factor, int min_neighbors);
+    void detectObjects(MySize minSize, sc_ufixed<8,1,SC_RND,SC_SAT> scale_factor, int min_neighbors, int shift_step);
 
     void detection_main();
             

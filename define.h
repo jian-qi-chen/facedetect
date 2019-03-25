@@ -31,8 +31,8 @@
 #define OUT_BW 10
 // #define INT_IMG_BW 26 //integral image bitwidth
 // #define INT_IMG_SQ_BW 32 // squared integral image bitwidth
-#define SCALE_FACTOR 1.2
-#define MAX_ITER 13 // MAX_ITER = round down to integer( log_{SCALE_FACTOR}{ min(IMAGE_HEIGHT,IMAGE_WIDTH)/24 } ) + 1
+// #define SCALE_FACTOR 1.2
+// #define MAX_ITER 13 // MAX_ITER = round down to integer( log_{SCALE_FACTOR}{ min(IMAGE_HEIGHT,IMAGE_WIDTH)/24 } ) + 1
 
 #define INPUT_FILENAME "Face.pgm"
 #define OUTPUT_FILENAME "Output.pgm"

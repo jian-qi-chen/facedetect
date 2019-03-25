@@ -44,6 +44,9 @@ void test_FACEDETECT::test_main ()
     wait();
 	printf("-- sending data --\r\n");
     
+    scaleFactor_in.write( (sc_ufixed<8,1,SC_RND,SC_SAT>) 1.2 );
+    shiftStep_in.write( (sc_uint<8>) 1 );
+    
     for(i=0;i<IMAGE_HEIGHT;i++){
         for(j=0;j<IMAGE_WIDTH;j=j+4){//Make sure IMAGE_WIDTH is multiple of 4
             for(k=0;k<4;k++)

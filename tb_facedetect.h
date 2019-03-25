@@ -30,6 +30,8 @@ SC_MODULE (test_FACEDETECT){
     sc_out<sc_uint<8> > in_data[4]; //for the case using 32bit bus
     sc_out<bool> write_signal; // burst write valid signal
     sc_out<bool> read_signal; // burst read valid signal
+    sc_out<sc_ufixed<8,1,SC_RND,SC_SAT> > scaleFactor_in;
+    sc_out<sc_uint<8> > shiftStep_in;
     
     MyImage imageObj;
     MyImage *image = &imageObj;
