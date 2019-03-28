@@ -23,14 +23,14 @@ SC_MODULE (facedetect){
     sc_in_clk clk;
     sc_in<bool> rst;
     
-    sc_in<bool> write_signal; // burst write valid signal
-    sc_in<bool> read_signal; // burst read valid signal
-    sc_in<sc_uint<8> > in_data[4]; //for the case using 32bit bus
-    sc_in<sc_ufixed<8,1,SC_RND,SC_SAT> > scaleFactor_in; // scale factor for image down-sampling
-    sc_in<sc_uint<8> > shiftStep_in; // pixel step for window shifting
-    sc_out<sc_uint<OUT_BW> > out_data[4]; //(x,y,w,h) coordinate, bitwidth need to be changed for larger image size
-    sc_out<sc_uint<8> > face_num_out;
-    sc_out<bool> ready;
+    sc_in<bool> write_signal/* Cyber valid_sig_gen=write_signal_v */; 
+    sc_in<bool> read_signal/* Cyber valid_sig_gen=read_signal_v */; // burst read valid signal
+    sc_in<sc_uint<32> > in_data/* Cyber valid_sig_gen=in_data_v */; //4 8-bit pixels at a time
+    sc_in<sc_ufixed<8,1,SC_RND,SC_SAT> > scaleFactor_in/* Cyber valid_sig_gen=scaleFactor_in_v */; // scale factor for image down-sampling
+    sc_in<sc_uint<8> > shiftStep_in/* Cyber valid_sig_gen=shiftStep_in_v */; // pixel step for window shifting
+    sc_out<sc_uint<OUT_BW*4> > out_data/* Cyber valid_sig_gen=out_data_v */; //{x,y,w,h} coordinate, bitwidth need to be changed for larger image size
+    sc_out<sc_uint<8> > face_num_out/* Cyber valid_sig_gen=face_num_out_v */;
+    sc_out<bool> ready/* Cyber valid_sig_gen=ready_v */;
     
     sc_ufixed<8,1,SC_RND,SC_SAT> scaleFactor; 
     sc_uint<8> shiftStep;
@@ -45,6 +45,10 @@ SC_MODULE (facedetect){
     int sq_int_buffer[IMAGE_HEIGHT * IMAGE_WIDTH]; // squared integral image buffer
     sc_uint<8> face_number;
     sc_uint<OUT_BW> face_coordinate[MAX_NUM_FACE][4]; //store the output coordinates (x,y,w,h)
+
+#ifdef IO
+    void writeIO(void);
+#endif
 
     int scaled_rectangles_array[34956];
 

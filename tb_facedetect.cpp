@@ -25,7 +25,10 @@ void test_FACEDETECT::test_main ()
 
 	int mode = 1;
 	int i,j,k;
-    int face_number;
+    int face_number, shiftStep;
+    float scaleFactor;
+    sc_uint<32> input_data_v;
+    sc_uint<OUT_BW*4> output_data_v;
     std::vector<MyRect> result;
     FILE *fp;
 
@@ -44,13 +47,23 @@ void test_FACEDETECT::test_main ()
     wait();
 	printf("-- sending data --\r\n");
     
-    scaleFactor_in.write( (sc_ufixed<8,1,SC_RND,SC_SAT>) 1.2 );
-    shiftStep_in.write( (sc_uint<8>) 1 );
+    // read from parameter.txt
+    fp = fopen("parameter.txt","r");
+    if (!fp){
+		printf("Unable to open file parameter.txt\n");
+		sc_stop();
+	}
+    fscanf(fp,"%f",&scaleFactor); //first line
+    fscanf(fp,"%d",&shiftStep); //second line
+    fclose(fp);
+    
+    scaleFactor_in.write( (sc_ufixed<8,1,SC_RND,SC_SAT>) scaleFactor );
+    shiftStep_in.write( (sc_uint<8>) shiftStep );
     
     for(i=0;i<IMAGE_HEIGHT;i++){
         for(j=0;j<IMAGE_WIDTH;j=j+4){//Make sure IMAGE_WIDTH is multiple of 4
-            for(k=0;k<4;k++)
-                in_data[k].write( image->data[i*IMAGE_WIDTH+j+k] );
+            input_data_v = ((sc_uint<8>)image->data[i*IMAGE_WIDTH+j+3],(sc_uint<8>)image->data[i*IMAGE_WIDTH+j+2],(sc_uint<8>)image->data[i*IMAGE_WIDTH+j+1],(sc_uint<8>)image->data[i*IMAGE_WIDTH+j]);
+            in_data.write( input_data_v );
             write_signal.write(1);
             wait();
         }
@@ -67,10 +80,20 @@ void test_FACEDETECT::test_main ()
     wait();
     wait();
     
+    // write to facenumber.txt
+    fp = fopen("facenumber.txt","w");
+    if (!fp){
+		printf("Unable to open file facenumber.txt\n");
+		sc_stop();
+	}
+    fprintf(fp,"%d\n",face_number); 
+    fclose(fp);
+    
     printf("tb: face_num_out=%d\n",face_number);
     for(i=0;i<face_number;i++){
         read_signal.write(1);
-        MyRect r = {(int)out_data[0].read(), (int)out_data[1].read(), (int)out_data[2].read(), (int)out_data[3].read()};
+        output_data_v = out_data.read();
+        MyRect r = {(int)output_data_v.range(OUT_BW-1,0), (int)output_data_v.range(2*OUT_BW-1,OUT_BW), (int)output_data_v.range(3*OUT_BW-1,2*OUT_BW), (int)output_data_v.range(4*OUT_BW-1,3*OUT_BW)};
         result.push_back(r);
         wait();
     }
@@ -91,6 +114,7 @@ void test_FACEDETECT::test_main ()
     
 	/* delete image and free classifier */
 	freeImage(image);
+    wait();
     sc_stop();
 
 }

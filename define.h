@@ -28,7 +28,7 @@
 #define PGM_MAXGRAY 255
 #define MAX_NUM_FACE 128
 #define MAXLABELS 30
-#define OUT_BW 10
+#define OUT_BW 9 //bitwidth of coordinate
 // #define INT_IMG_BW 26 //integral image bitwidth
 // #define INT_IMG_SQ_BW 32 // squared integral image bitwidth
 // #define SCALE_FACTOR 1.2

@@ -23,13 +23,12 @@ int sc_main(int argc, char** argv)
     
     sc_signal<bool> write_signal;
     sc_signal<bool> read_signal;
-    sc_signal<sc_uint<8> > in_data[4];
-    sc_signal<sc_uint<OUT_BW> > out_data[4];
+    sc_signal<sc_uint<32> > in_data;
+    sc_signal<sc_uint<OUT_BW*4> > out_data;
     sc_signal<sc_uint<8> > face_num_out;
     sc_signal<bool> ready;
     sc_signal<sc_ufixed<8,1,SC_RND,SC_SAT> > scaleFactor_in;
     sc_signal<sc_uint<8> > shiftStep_in;
-    int i;
     
     // initialization
     facedetect u_FACEDETECT("face_detect");
@@ -40,10 +39,8 @@ int sc_main(int argc, char** argv)
     u_FACEDETECT.rst( rst );
     u_FACEDETECT.write_signal( write_signal );
     u_FACEDETECT.read_signal( read_signal );
-    for(i=0;i<4;i++)
-        u_FACEDETECT.in_data[i]( in_data[i] );
-    for(i=0;i<4;i++)
-        u_FACEDETECT.out_data[i]( out_data[i] );    
+    u_FACEDETECT.in_data( in_data );
+    u_FACEDETECT.out_data( out_data );
     u_FACEDETECT.face_num_out( face_num_out );
     u_FACEDETECT.ready( ready );
     u_FACEDETECT.scaleFactor_in( scaleFactor_in );
@@ -53,10 +50,8 @@ int sc_main(int argc, char** argv)
     test.rst( rst );
     test.write_signal( write_signal );
     test.read_signal( read_signal );
-    for(i=0;i<4;i++)
-        test.in_data[i]( in_data[i] );
-    for(i=0;i<4;i++)
-        test.out_data[i]( out_data[i] );    
+    test.in_data( in_data );
+    test.out_data( out_data );    
     test.face_num_out( face_num_out );
     test.ready( ready );
     test.scaleFactor_in( scaleFactor_in );

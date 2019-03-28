@@ -64,6 +64,7 @@ LIBS	= -lm $(CWB_SC_LIB)  -Wl,-rpath="$(CWB_LIB)"
 OBJS	= $(notdir $(addsuffix .o,$(basename $(SRCS))))
 debug: CFLAGS += -g -DDEBUG
 wave: CFLAGS += -DWAVE_DUMP
+io: CFLAGS += -DIO
 
 $(TARGET) : $(OBJS)
 	$(LINKER) -o "$@" $(LDFLAGS) $(OBJS) $(LIBS)
@@ -72,6 +73,9 @@ debug: $(OBJS)
 	$(LINKER) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS)
 	
 wave:  $(OBJS) 
+	$(LINKER) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS)
+	
+io:  $(OBJS) 
 	$(LINKER) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS)
 
 image.o: image.cpp $(HDRS)
@@ -87,4 +91,4 @@ tb_facedetect.o: tb_facedetect.cpp $(HDRS)
 	$(CC) $(CFLAGS) $(CWB_SC_INCL) $(INCL) -c $< -o $@
 
 clean:
-	rm -f *.o Output.pgm *.vcd $(TARGET)
+	rm -f *.o Output.pgm facenumber.txt *.vcd $(TARGET)

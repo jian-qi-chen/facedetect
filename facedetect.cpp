@@ -17,6 +17,60 @@
 #include "define.h"
 #include "facedetect.h"
 
+
+#ifdef IO
+int writetoTLV_int(int value, char* filename);
+int writetoTLV_float(float value, char* filename);
+
+//write the inputs into tlv file every valid cycle.
+void facedetect::writeIO(void)
+{
+    int ret_v;
+    
+    ret_v = writetoTLV_int( (int)write_signal.read(), "./tlv/write_signal.tlv" );
+    ret_v += writetoTLV_int( (int)read_signal.read(), "./tlv/read_signal.tlv" );
+    ret_v += writetoTLV_int( (int)in_data.read(), "./tlv/in_data.tlv" );
+    ret_v += writetoTLV_float( (float)scaleFactor_in.read(), "./tlv/scaleFactor_in.tlv" );
+    ret_v += writetoTLV_int( (int)shiftStep_in.read(), "./tlv/shiftStep_in.tlv" );
+
+    
+    if(ret_v!=0)
+        sc_stop();
+    
+}
+
+int writetoTLV_int(int value, char* filename)
+{
+    FILE* fp;
+    fp = fopen(filename, "a");
+    if (fp == NULL){
+        printf("ERROR: unable to open file %s\n",filename);
+        return -1;
+    }
+    
+    fprintf(fp, "%d\n", value);
+    fclose(fp);
+    return 0;
+}
+
+int writetoTLV_float(float value, char* filename)
+{
+    FILE* fp;
+    fp = fopen(filename, "a");
+    if (fp == NULL){
+        printf("ERROR: unable to open file %s\n",filename);
+        return -1;
+    }
+    
+    fprintf(fp, "%f\n", value);
+    fclose(fp);
+    return 0;
+}
+
+#endif
+
+
+
 const int rectangles_array[34956] = {
     #include "rectangles_array.dat"
 };
@@ -684,11 +738,10 @@ int facedetect::predicate(sc_ufixed<8,1,SC_RND,SC_SAT> eps, sc_uint<OUT_BW> r1[4
 
 void facedetect::detection_main()
 {
-    int i,j,k;
+    int i,j;
+    sc_uint<32> read_data;
 
-//    myCascade *cascade = &cascadeObj;
     cascadeObj.n_stages=25;                   //number of strong classifier stages
-//    cascadeObj.total_nodes=2913;              //number of total weak classifier notes in the cascade
     cascadeObj.orig_window_size.height = 24;  //original window height
     cascadeObj.orig_window_size.width = 24;   //original window width 
     minNeighbours = 1;
@@ -696,19 +749,33 @@ void facedetect::detection_main()
     minSize.width = 20;
     
     ready.write(0);
+#ifdef IO
+    system("mkdir -p tlv && rm ./tlv/*");
+    writeIO();
+#endif
     wait();
     
     while(1){
         if(write_signal.read()==1){
             for(i=0;i<IMAGE_HEIGHT;i++){
                 for(j=0;j<IMAGE_WIDTH;j=j+4){ //Make sure IMAGE_WIDTH is multiple of 4, need rewrite the code otherwise.
-                    for(k=0;k<4;k++)
-                        in_img_buffer[i][j+k] = in_data[k].read();
+                    read_data = in_data.read();
+                    in_img_buffer[i][j] = read_data.range(7,0);
+                    in_img_buffer[i][j+1] = read_data.range(15,8);
+                    in_img_buffer[i][j+2] = read_data.range(23,16);
+                    in_img_buffer[i][j+3] = read_data.range(31,24);
+                    
+                    #ifdef IO
+                    writeIO();
+                    #endif
                     wait();
                 }
             }
         }
         else{
+            #ifdef IO
+            writeIO();
+            #endif
             wait();
             continue;
         }
@@ -719,26 +786,35 @@ void facedetect::detection_main()
         
         ready.write(1);
         face_num_out.write(face_number);
+        #ifdef IO
+        writeIO();
+        #endif
         wait();
         
         i = 0;
         while(i<face_number){
             if(read_signal.read()==1){
-                out_data[0].write(face_coordinate[i][0]);
-                out_data[1].write(face_coordinate[i][1]);
-                out_data[2].write(face_coordinate[i][2]);
-                out_data[3].write(face_coordinate[i][3]);
+                out_data.write( (face_coordinate[i][3],face_coordinate[i][2],face_coordinate[i][1],face_coordinate[i][0]) );
                 i++;
-
+                #ifdef IO
+                writeIO();
+                #endif
                 wait();
             }
             else
+                #ifdef IO
+                writeIO();
+                #endif
                 wait();
         }       
             
         ready.write(0);
+        #ifdef IO
+        writeIO();
+        #endif
         wait();
     }
 }
+
 
 /* End of file. */
