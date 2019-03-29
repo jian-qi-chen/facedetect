@@ -816,11 +816,12 @@ void facedetect::detection_main()
                 #endif
                 wait();
             }
-            else
+            else{
                 #ifdef IO
                 writeIO();
                 #endif
                 wait();
+            }
         }       
             
         ready.write(0);
