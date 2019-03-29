@@ -65,7 +65,6 @@ int myatoi (char* string)
 		i++;
 	}
 
-//	for (i; i < length; i++)
 	while(i < length)
 	{
 		// handle the decimal place if there is one

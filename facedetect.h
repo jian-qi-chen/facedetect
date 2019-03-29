@@ -41,8 +41,8 @@ SC_MODULE (facedetect){
     
     sc_uint<8> in_img_buffer[IMAGE_HEIGHT][IMAGE_WIDTH];
     sc_uint<8> downsample_buffer[IMAGE_HEIGHT][IMAGE_WIDTH];
-    int int_img_buffer[IMAGE_HEIGHT * IMAGE_WIDTH]; //integral image buffer
-    int sq_int_buffer[IMAGE_HEIGHT * IMAGE_WIDTH]; // squared integral image buffer
+    int int_img_buffer[25 * IMAGE_WIDTH]; //integral image buffer
+    int sq_int_buffer[25 * IMAGE_WIDTH]; // squared integral image buffer
     sc_uint<8> face_number;
     sc_uint<OUT_BW> face_coordinate[MAX_NUM_FACE][4]; //store the output coordinates (x,y,w,h)
 
@@ -53,12 +53,12 @@ SC_MODULE (facedetect){
     int scaled_rectangles_array[34956];
 
     /* sets images for haar classifier cascade */
-    void setImageForCascadeClassifier(  int* sum, int* sqsum, int width, int height);
+    void setImageForCascadeClassifier(  int* sum, int* sqsum, int width);
     
-    void updatePvalue(  int* sum, int* sqsum, int p_offset, int pq_offset, int width, int height);
+    void updatePvalue(  int* sum, int* sqsum, int p_offset, int pq_offset, int width);
 
     /* runs the cascade on the specified window */
-    int runCascadeClassifier( MyPoint pt, int start_stage, int width, int height);
+    int runCascadeClassifier( MyPoint pt, int start_stage, int width);
 
     void groupRectangles( int groupThreshold, sc_ufixed<8,1,SC_RND,SC_SAT> eps);
 
@@ -66,11 +66,13 @@ SC_MODULE (facedetect){
     
     int predicate(sc_ufixed<8,1,SC_RND,SC_SAT> eps, sc_uint<OUT_BW> r1[4], sc_uint<OUT_BW> r2[4]);
     
-    void ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_row, int sum_col, int shift_step);
+    void ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_col, int shift_step, int y_bias);
     
     int evalWeakClassifier(int variance_norm_factor, int p_offset, int tree_index, int w_index, int r_index );
     
     void integralImages( sc_uint<8> src[IMAGE_HEIGHT][IMAGE_WIDTH], int *sumData, int *sqsumData, int width, int height);
+    
+    void integralmages_lastrow(sc_uint<8> src[IMAGE_HEIGHT][IMAGE_WIDTH], int *sumData, int *sqsumData, int width, int y_bias);
     
     void nearestNeighbor ( sc_uint<8> dst[IMAGE_HEIGHT][IMAGE_WIDTH], int width, int height);
 

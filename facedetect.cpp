@@ -110,7 +110,7 @@ void facedetect::detectObjects( MySize minSize,
 
     /* group overlaping windows */
     const sc_ufixed<8,1,SC_RND,SC_SAT> GROUP_EPS = 0.4;
-    int iter_counter = 0;
+    int y_bias, iter_counter = 0;
 
     /* scaling factor */
     sc_ufixed<10,5,SC_RND,SC_SAT> factor;
@@ -151,7 +151,7 @@ void facedetect::detectObjects( MySize minSize,
         * At each scale of the image pyramid,
         * compute a new integral and squared integral image
         ***************************************************/
-        integralImages(downsample_buffer, int_img_buffer, sq_int_buffer, sz.width, sz.height);
+        integralImages(downsample_buffer, int_img_buffer, sq_int_buffer, sz.width, 25);
 
         /**************************************************
         * Note:
@@ -162,14 +162,19 @@ void facedetect::detectObjects( MySize minSize,
         * This function loads does not do computation.
         * The computation is done next in ScaleImage_Invoker
         *************************************************/
-        setImageForCascadeClassifier(  int_img_buffer, sq_int_buffer, sz.width, sz.height);
+        setImageForCascadeClassifier(  int_img_buffer, sq_int_buffer, sz.width);
 
-
-        /****************************************************
-        * Process the current scale with the cascaded fitler.
-        * The main computations are invoked by this function.
-        ***************************************************/
-        ScaleImage_Invoker( factor, sz.height, sz.width, shift_step);
+        for(y_bias=0; y_bias < sz.height-25+1; y_bias++){
+            if(y_bias!=0)
+                // shift integral image buffer and only update the last row of pixels
+                integralmages_lastrow(downsample_buffer, int_img_buffer, sq_int_buffer, sz.width, y_bias);
+            
+            /****************************************************
+            * Process the current scale with the cascaded fitler.
+            * The main computations are invoked by this function.
+            ***************************************************/
+            ScaleImage_Invoker( factor, sz.width, shift_step, y_bias);
+        }
         
     } /* end of the factor loop, finish all scales in pyramid*/
 
@@ -204,7 +209,7 @@ unsigned int int_sqrt (unsigned int value)
 }
 
 
-void facedetect::setImageForCascadeClassifier( int* sum, int* sqsum, int width, int height)
+void facedetect::setImageForCascadeClassifier( int* sum, int* sqsum, int width)
 {
     int i, j, k;
     MyRect equRect;
@@ -217,15 +222,6 @@ void facedetect::setImageForCascadeClassifier( int* sum, int* sqsum, int width, 
     equRect.height = cascadeObj.orig_window_size.height;
 
     cascadeObj.inv_window_area = equRect.width*equRect.height;
-
-    cascadeObj.p0 = sum[0] ;
-    cascadeObj.p1 = sum[equRect.width - 1] ;
-    cascadeObj.p2 = sum[width*(equRect.height - 1)];
-    cascadeObj.p3 = sum[width*(equRect.height - 1) + equRect.width - 1];
-    cascadeObj.pq0 = sqsum[0];
-    cascadeObj.pq1 = sqsum[equRect.width - 1] ;
-    cascadeObj.pq2 = sqsum[width*(equRect.height - 1)];
-    cascadeObj.pq3 = sqsum[width*(equRect.height - 1) + equRect.width - 1];
 
     /****************************************
     * Load the index of the four corners
@@ -316,7 +312,7 @@ int facedetect::evalWeakClassifier(int variance_norm_factor, int p_offset, int t
 
 }
 
-void facedetect::updatePvalue(  int* sum, int* sqsum, int p_offset, int pq_offset, int width, int height)
+void facedetect::updatePvalue(  int* sum, int* sqsum, int p_offset, int pq_offset, int width)
 {
     cascadeObj.p0 = sum[0+p_offset] ;
     cascadeObj.p1 = sum[cascadeObj.orig_window_size.width - 1+p_offset] ;
@@ -328,7 +324,7 @@ void facedetect::updatePvalue(  int* sum, int* sqsum, int p_offset, int pq_offse
     cascadeObj.pq3 = sqsum[width*(cascadeObj.orig_window_size.height - 1) + cascadeObj.orig_window_size.width - 1+pq_offset];
 }
 
-int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width, int height)
+int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width)
 {
 
     int p_offset, pq_offset;
@@ -350,7 +346,7 @@ int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width, in
     * inv_window_area is 1 over the total number of pixels in the detection window
     *************************************************************************/
 
-    updatePvalue( int_img_buffer, sq_int_buffer, p_offset, pq_offset, width, height);
+    updatePvalue( int_img_buffer, sq_int_buffer, p_offset, pq_offset, width);
     
     variance_norm_factor =  (cascadeObj.pq0 - cascadeObj.pq1 - cascadeObj.pq2 + cascadeObj.pq3);
     mean = (cascadeObj.p0 - cascadeObj.p1 - cascadeObj.p2 + cascadeObj.p3);
@@ -421,58 +417,45 @@ int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width, in
 }
 
 
-void facedetect::ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_row, int sum_col, int shift_step)
+void facedetect::ScaleImage_Invoker( sc_ufixed<10,5,SC_RND,SC_SAT> factor, int sum_col, int shift_step, int y_bias)
 {
 
     MyPoint p;
 
     int result;
-    int y1, y2, x2, x, y, step;
+    int x2, x, step;
 
     MySize winSize0 = cascadeObj.orig_window_size;
     MySize winSize;
 
     winSize.width =  myRound(winSize0.width*factor);
     winSize.height =  myRound(winSize0.height*factor);
-    y1 = 0;
 
     /********************************************
     * When filter window shifts to image boarder,
     * some margin need to be kept
     *********************************************/
-    y2 = sum_row - winSize0.height;
     x2 = sum_col - winSize0.width;
-
-    /********************************************
-    * Step size of filter window shifting
-    * Reducing step makes program faster,
-    * but decreases quality of detection.
-    * example:
-    * step = factor > 2 ? 1 : 2;
-    *
-    * The step size is set to 1 here.
-    * i.e., shift the filter window by 1 pixel.
-    *******************************************/
+    p.y = 0;
+    
     step = shift_step;
 
     for( x = 0; x <= x2-1; x += step )
-        for( y = y1; y <= y2-1; y += step )
+    {
+        p.x = x;
+
+        result = runCascadeClassifier( p, 0, sum_col);
+
+        if( result > 0 )
         {
-            p.x = x;
-            p.y = y;
-
-            result = runCascadeClassifier( p, 0, sum_col, sum_row );
-
-            if( result > 0 )
-            {
-                face_coordinate[face_number][0] = myRound(x*factor);
-                face_coordinate[face_number][1] = myRound(y*factor);
-                face_coordinate[face_number][2] = winSize.width;
-                face_coordinate[face_number][3] = winSize.height;
-                if(face_number<MAX_NUM_FACE-1)
-                    face_number++;
-            }
+            face_coordinate[face_number][0] = myRound(x*factor);
+            face_coordinate[face_number][1] = myRound(y_bias*factor);
+            face_coordinate[face_number][2] = winSize.width;
+            face_coordinate[face_number][3] = winSize.height;
+            if(face_number<MAX_NUM_FACE-1)
+                face_number++;
         }
+    }
 }
 
 /*****************************************************
@@ -508,6 +491,38 @@ void facedetect::integralImages( sc_uint<8> src[IMAGE_HEIGHT][IMAGE_WIDTH], int 
             sumData[y*width+x]=t;
             sqsumData[y*width+x]=tq;
         }
+    }
+}
+
+// shift the buffer and only update the last row
+void facedetect::integralmages_lastrow(sc_uint<8> src[IMAGE_HEIGHT][IMAGE_WIDTH], int *sumData, int *sqsumData, int width, int y_bias)
+{
+    int x, y, s, sq, t, tq;
+    unsigned char it;
+    
+    // shift to the upper row
+    for(y=0; y<24; y++){
+        for(x=0; x<width; x++){
+            sumData[y*width+x] = sumData[(y+1)*width+x];
+            sqsumData[y*width+x] = sqsumData[(y+1)*width+x];
+        }
+    }
+    
+    // update the last row
+    s = 0;
+    sq = 0;
+    for(x=0; x<width; x++){
+        it = src[24+y_bias][x];
+        s += it;
+        sq += it*it;
+        
+        t = s;
+        tq = sq;
+        t += sumData[23*width+x];
+        tq += sqsumData[23*width+x];
+        
+        sumData[24*width+x] = t;
+        sqsumData[24*width+x] = tq;
     }
 }
 
