@@ -755,6 +755,7 @@ void facedetect::detection_main()
 {
     int i,j;
     sc_uint<32> read_data;
+    sc_uint<OUT_BW*4> write_data;
 
     cascadeObj.n_stages=25;                   //number of strong classifier stages
     cascadeObj.orig_window_size.height = 24;  //original window height
@@ -771,30 +772,34 @@ void facedetect::detection_main()
     wait();
     
     while(1){
-        if(write_signal.read()==1){
-            for(i=0;i<IMAGE_HEIGHT;i++){
-                for(j=0;j<IMAGE_WIDTH;j=j+4){ //Make sure IMAGE_WIDTH is multiple of 4, need rewrite the code otherwise.
+        i = 0;
+        
+/* Cyber scheduling_block */
+{
+        while(i < IMAGE_HEIGHT){
+            j = 0;
+            while(j < IMAGE_WIDTH){
+                if(write_signal.read()==1){
                     read_data = in_data.read();
                     in_img_buffer[i][j] = read_data.range(7,0);
+                    wait();
                     in_img_buffer[i][j+1] = read_data.range(15,8);
+                    wait();
                     in_img_buffer[i][j+2] = read_data.range(23,16);
+                    wait();
                     in_img_buffer[i][j+3] = read_data.range(31,24);
                     
-                    #ifdef IO
-                    writeIO();
-                    #endif
-                    wait();
+                    j += 4;
                 }
+                #ifdef IO
+                writeIO();
+                #endif
+                wait();
             }
-        }
-        else{
-            #ifdef IO
-            writeIO();
-            #endif
-            wait();
-            continue;
-        }
-        
+            i += 1;
+        }       
+}
+
         scaleFactor = scaleFactor_in.read();
         shiftStep = shiftStep_in.read();
         detectObjects(minSize, scaleFactor, minNeighbours, shiftStep);
@@ -807,23 +812,19 @@ void facedetect::detection_main()
         wait();
         
         i = 0;
-        while(i<face_number){
+/* Cyber scheduling_block */
+{
+        while(i < face_number){
             if(read_signal.read()==1){
                 out_data.write( (face_coordinate[i][3],face_coordinate[i][2],face_coordinate[i][1],face_coordinate[i][0]) );
                 i++;
-                #ifdef IO
-                writeIO();
-                #endif
-                wait();
             }
-            else{
-                #ifdef IO
-                writeIO();
-                #endif
-                wait();
-            }
+            #ifdef IO
+            writeIO();
+            #endif
+            wait();
         }       
-            
+}            
         ready.write(0);
         #ifdef IO
         writeIO();

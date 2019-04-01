@@ -44,13 +44,13 @@ SC_MODULE (facedetect){
     int int_img_buffer[25 * IMAGE_WIDTH]; //integral image buffer
     int sq_int_buffer[25 * IMAGE_WIDTH]; // squared integral image buffer
     sc_uint<8> face_number;
-    sc_uint<OUT_BW> face_coordinate[MAX_NUM_FACE][4]; //store the output coordinates (x,y,w,h)
+    sc_uint<OUT_BW> face_coordinate[MAX_NUM_FACE][4]/* Cyber array = REG */; //store the output coordinates (x,y,w,h)
 
+    int scaled_rectangles_array[34956];
+    
 #ifdef IO
     void writeIO(void);
 #endif
-
-    int scaled_rectangles_array[34956];
 
     /* sets images for haar classifier cascade */
     void setImageForCascadeClassifier(  int* sum, int* sqsum, int width);
