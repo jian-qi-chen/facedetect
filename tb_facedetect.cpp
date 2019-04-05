@@ -66,6 +66,9 @@ void test_FACEDETECT::test_main ()
             in_data.write( input_data_v );
             write_signal.write(1);
             wait();
+            wait();
+            wait();
+            wait();
         }
     }
     

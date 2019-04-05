@@ -19,7 +19,7 @@
 
 
 #ifdef IO
-int writetoTLV_int(int value, char* filename);
+int writetoTLV_int(unsigned int value, char* filename);
 int writetoTLV_float(float value, char* filename);
 
 //write the inputs into tlv file every valid cycle.
@@ -27,11 +27,11 @@ void facedetect::writeIO(void)
 {
     int ret_v;
     
-    ret_v = writetoTLV_int( (int)write_signal.read(), "./tlv/write_signal.tlv" );
-    ret_v += writetoTLV_int( (int)read_signal.read(), "./tlv/read_signal.tlv" );
-    ret_v += writetoTLV_int( (int)in_data.read(), "./tlv/in_data.tlv" );
+    ret_v = writetoTLV_int( (unsigned int)write_signal.read(), "./tlv/write_signal.tlv" );
+    ret_v += writetoTLV_int( (unsigned int)read_signal.read(), "./tlv/read_signal.tlv" );
+    ret_v += writetoTLV_int( (unsigned int)in_data.read(), "./tlv/in_data.tlv" );
     ret_v += writetoTLV_float( (float)scaleFactor_in.read(), "./tlv/scaleFactor_in.tlv" );
-    ret_v += writetoTLV_int( (int)shiftStep_in.read(), "./tlv/shiftStep_in.tlv" );
+    ret_v += writetoTLV_int( (unsigned int)shiftStep_in.read(), "./tlv/shiftStep_in.tlv" );
 
     
     if(ret_v!=0)
@@ -39,7 +39,7 @@ void facedetect::writeIO(void)
     
 }
 
-int writetoTLV_int(int value, char* filename)
+int writetoTLV_int(unsigned int value, char* filename)
 {
     FILE* fp;
     fp = fopen(filename, "a");
@@ -48,7 +48,7 @@ int writetoTLV_int(int value, char* filename)
         return -1;
     }
     
-    fprintf(fp, "%d\n", value);
+    fprintf(fp, "%u\n", value);
     fclose(fp);
     return 0;
 }
