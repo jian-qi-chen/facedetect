@@ -1,0 +1,9 @@
+Face0.pgm: 8
+Face1.pgm: 7
+Face2.pgm: 7
+Face3.pgm: 3
+Face4.pgm: 3
+Face5.pgm: 3
+Face6.pgm: 3
+Face7.pgm: 2
+
