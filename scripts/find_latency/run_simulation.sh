@@ -18,6 +18,10 @@ if [ $? -ne 0 ]; then
 fi
 
 usleep 10000
+THREADNAME=$(grep SC_THREAD ${DESIGNNAME}_C.cpp)
+ADDTEXT='\nset_stack_size(67102720);'
+sed -i "s/${THREADNAME}/${THREADNAME}${ADDTEXT}/g" ${DESIGNNAME}_C.cpp # to avoid stack overflow
+
 make -f Makefile.GNU
 if [ $? -ne 0 ]; then
 	exit 1
