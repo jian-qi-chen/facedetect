@@ -27,11 +27,11 @@ void facedetect::writeIO(void)
 {
     int ret_v;
     
-    ret_v = writetoTLV_int( (int)write_signal.read(), "./tlv/write_signal.tlv" );
-    ret_v += writetoTLV_int( (int)read_signal.read(), "./tlv/read_signal.tlv" );
-    ret_v += writetoTLV_int( (int)in_data.read(), "./tlv/in_data.tlv" );
+    ret_v = writetoTLV_int( (unsigned int)write_signal.read(), "./tlv/write_signal.tlv" );
+    ret_v += writetoTLV_int( (unsigned int)read_signal.read(), "./tlv/read_signal.tlv" );
+    ret_v += writetoTLV_int( (unsigned int)in_data.read(), "./tlv/in_data.tlv" );
     ret_v += writetoTLV_float( (float)scaleFactor_in.read(), "./tlv/scaleFactor_in.tlv" );
-    ret_v += writetoTLV_int( (int)shiftStep_in.read(), "./tlv/shiftStep_in.tlv" );
+    ret_v += writetoTLV_int( (unsigned int)shiftStep_in.read(), "./tlv/shiftStep_in.tlv" );
 
     
     if(ret_v!=0)
@@ -48,7 +48,7 @@ int writetoTLV_int(int value, char* filename)
         return -1;
     }
     
-    fprintf(fp, "%d\n", value);
+    fprintf(fp, "%u\n", value);
     fclose(fp);
     return 0;
 }
@@ -104,8 +104,7 @@ inline  int  myRound( sc_ufixed<16,12,SC_RND,SC_SAT> value )
  * Description: It calls all the major steps
  ******************************************************/
 
-void facedetect::detectObjects( MySize minSize,
-				   sc_ufixed<8,1,SC_RND,SC_SAT> scaleFactor, int minNeighbors, int shift_step)
+void facedetect::detectObjects( MySize minSize, sc_ufixed<8,1,SC_RND,SC_SAT> scaleFactor, int minNeighbors, int shift_step)
 {
 
     /* group overlaping windows */
@@ -229,14 +228,13 @@ void facedetect::setImageForCascadeClassifier( int* sum, int* sqsum, int width)
     **************************************/
 
     /* loop over the number of stages */
-    for( i = 0; i < cascadeObj.n_stages; i++ )
+    for( i = 0; i < 25; i++ )
     {
         /* loop over the number of haar features */
         for( j = 0; j < stages_array[i]; j++ )
         {
-            int nr = 3;
             /* loop over the number of rectangles */
-            for( k = 0; k < nr; k++ )
+            for( k = 0; k < 3; k++ )
             {
                 tr.x = rectangles_array[r_index + k*4];
                 tr.width = rectangles_array[r_index + 2 + k*4];
@@ -342,7 +340,6 @@ int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width)
     /**************************************************************************
     * Image normalization
     * mean is the mean of the pixels in the detection window
-    * cascade->pqi[pq_offset] are the squared pixel values (using the squared integral image)
     * inv_window_area is 1 over the total number of pixels in the detection window
     *************************************************************************/
 
@@ -376,21 +373,14 @@ int facedetect::runCascadeClassifier( MyPoint pt, int start_stage, int width)
     * except that filter results need to be merged,
     * and compared with a per-stage threshold.
     *************************************************/
-    for( i = start_stage; i < cascadeObj.n_stages; i++ )
+    for( i = start_stage; i < 25 ; i++ )
     {
-
-        /****************************************************
-        * A shared variable that induces false dependency
-        *
-        * To avoid it from limiting parallelism,
-        * we can duplicate it multiple times,
-        * e.g., using stage_sum_array[number_of_threads].
-        * Then threads only need to sync at the end
-        ***************************************************/
         stage_sum = 0;
 
-        for( j = 0; j < stages_array[i]; j++ )
+        for( j = 0; j < 200; j++ )
         {
+            if (j>=stages_array[i])
+                break;
             /**************************************************
             * Send the shifted window to a haar filter.
             **************************************************/
@@ -558,8 +548,6 @@ void facedetect::nearestNeighbor ( sc_uint<8> dst[IMAGE_HEIGHT][IMAGE_WIDTH], in
         }
     }
 }
-
-
 
 void facedetect::groupRectangles( int groupThreshold, sc_ufixed<8,1,SC_RND,SC_SAT> eps)
 {
@@ -757,7 +745,6 @@ void facedetect::detection_main()
     sc_uint<32> read_data;
     sc_uint<OUT_BW*4> write_data;
 
-    cascadeObj.n_stages=25;                   //number of strong classifier stages
     cascadeObj.orig_window_size.height = 24;  //original window height
     cascadeObj.orig_window_size.width = 24;   //original window width 
     minNeighbours = 1;

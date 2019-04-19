@@ -25,7 +25,7 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-timeout 30m bdltran -c${CYCLE} -s -Zresource_fcnt=GENERATE -Zresource_mcnt=GENERATE -Zdup_reset=YES -Zfolding_sharing=inter_stage -tcio -lb /eda/cwb/cyber_61/LINUX/packages/${DEVICENAME}.BLIB -lfl /eda/cwb/cyber_61/LINUX/packages/${DEVICENAME}.FLIB ${DESIGNNAME}.IFF
+timeout 120m bdltran -c${CYCLE} -s -Zresource_fcnt=GENERATE -Zresource_mcnt=GENERATE -Zdup_reset=YES -Zfolding_sharing=inter_stage -tcio -lb /eda/cwb/cyber_61/LINUX/packages/${DEVICENAME}.BLIB -lfl /eda/cwb/cyber_61/LINUX/packages/${DEVICENAME}.FLIB ${DESIGNNAME}.IFF
 if [ $? -ne 0 ]; then
 	echo bdltran ERROR
 	exit 1

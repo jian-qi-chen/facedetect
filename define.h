@@ -77,10 +77,7 @@ struct MyIntImage
 };
 
 struct myCascade
-{
-    // number of stages (22)
-    int  n_stages;
-    
+{    
     // size of the window used in the training set (20 x 20)
     MySize orig_window_size;
 

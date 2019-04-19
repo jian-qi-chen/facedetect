@@ -9,7 +9,7 @@
 //--------------------------------------------------------------------------------------------
 // Date     Version   Author                            Description
 //--------------------------------------------------------------------------------------------
-//25/03/2019  1.0   UTD DARClab	                        face detector testbench 
+//25/03/2019  1.0   UTD DARClab                         face detector testbench 
 //============================================================================================
 
 #include "define.h"
@@ -21,10 +21,10 @@ using namespace std;
 void test_FACEDETECT::test_main ()
 {
 
-	int flag;
+    int flag;
 
-	int mode = 1;
-	int i,j,k;
+    int mode = 1;
+    int i,j,k;
     int face_number, shiftStep;
     float scaleFactor;
     sc_uint<32> input_data_v;
@@ -33,26 +33,26 @@ void test_FACEDETECT::test_main ()
     FILE *fp;
 
 
-	printf("-- entering main function --\r\n");
+    printf("-- entering main function --\r\n");
 
-	printf("-- loading image --\r\n");
+    printf("-- loading image --\r\n");
 
-	flag = readPgm((char *)"Face.pgm", image);//read the .pgm image
-	if (flag == -1)
-	{
-		printf( "Unable to open input image\n");
-		sc_stop();
-	}
+    flag = readPgm((char *)"Face.pgm", image);//read the .pgm image
+    if (flag == -1)
+    {
+        printf( "Unable to open input image\n");
+        sc_stop();
+    }
 
     wait();
-	printf("-- sending data --\r\n");
+    printf("-- sending data --\r\n");
     
     // read from parameter.txt
     fp = fopen("parameter.txt","r");
     if (!fp){
-		printf("Unable to open file parameter.txt\n");
-		sc_stop();
-	}
+        printf("Unable to open file parameter.txt\n");
+        sc_stop();
+    }
     fscanf(fp,"%f",&scaleFactor); //first line
     fscanf(fp,"%d",&shiftStep); //second line
     fclose(fp);
@@ -74,7 +74,7 @@ void test_FACEDETECT::test_main ()
     
     write_signal.write(0);
     
-	printf("-- detecting faces --\r\n");    
+    printf("-- detecting faces --\r\n");    
     while(ready.read()==0)
         wait();
     
@@ -86,9 +86,9 @@ void test_FACEDETECT::test_main ()
     // write to facenumber.txt
     fp = fopen("facenumber.txt","w");
     if (!fp){
-		printf("Unable to open file facenumber.txt\n");
-		sc_stop();
-	}
+        printf("Unable to open file facenumber.txt\n");
+        sc_stop();
+    }
     fprintf(fp,"%d\n",face_number); 
     fclose(fp);
     
@@ -102,21 +102,21 @@ void test_FACEDETECT::test_main ()
     }
     read_signal.write(0);
     printf("result size: %d\n",result.size());
-	
-	for(i = 0; i < result.size(); i++ )
-	{
-		MyRect r = result[i];
-		drawRectangle(image, r);
-	}
+    
+    for(i = 0; i < result.size(); i++ )
+    {
+        MyRect r = result[i];
+        drawRectangle(image, r);
+    }
 
-	printf("-- saving output --\r\n");
-	flag = writePgm((char *)OUTPUT_FILENAME, image);
+    printf("-- saving output --\r\n");
+    flag = writePgm((char *)OUTPUT_FILENAME, image);
 
-	printf("-- image saved --\r\n");
+    printf("-- image saved --\r\n");
 
     
-	/* delete image and free classifier */
-	freeImage(image);
+    /* delete image and free classifier */
+    freeImage(image);
     wait();
     sc_stop();
 
