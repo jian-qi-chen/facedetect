@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-import os, sys, getopt, json, time
+import os, sys, getopt, json, time, re, math
 import matplotlib.pyplot as plt
 
 testcase_num = 8
@@ -7,6 +7,13 @@ hls_flag = 0 # 1 means force to re-high-level synthesize
 mi_flag = 0 # manualinput flag
 hls_cycle = '2000'
 hls_device = 'cycloneV'
+
+ALUT_PWR = 0.00326 # 1 ALUT consumes 0.00326 mW
+REG_PWR = 0.00238 # 1 Register(FF) consumes 0.00238mW
+RAM10K_PWR = 0.473 # 1 M10K block, including 10K bits
+DSP9_PWR = 0.255
+DSP18_PWR = 0.526
+DSP27_PWR = 1.134
 
 def usage():
     print('This program will run high-level synthesis and cycle-accurate simulation to find out the real latency of the face detector. The SystemC source code is in ./src/, test vector of difference test images are in ./tlv_data/. Apart from test vectors, different shiftStep(ss) and scaleFactor(sf) will also be tested. The face detected rate under different ss and sf can be obtained through pure systemC simulation which can be performed in another python program "facedetected_vs_alg_param.py", and the results are stored in the form of json file. These json files (2D lists) are the inputs of this program and stored in ./json/: shiftStep(X), scaleFactor(Y). facedetected(results). The results of this program is a graph of facedetected vs. latency, which will be stored as a png image, and a csv file will be generated as well. The latency generated is the average latency of testcase_num test cases.\n\n')
@@ -150,14 +157,12 @@ def FindLatency(mi_shiftStep, mi_scaleFactor):
     
     with open('FindLatency_log.txt','a') as f:
         f.write('\nSimulations Ended at '+time.strftime("%a,%d %b %Y %H:%M:%S", time.localtime())+' \n')
-        
-    # write to json
-    with open('./json/latency','w') as f:
-        json.dump(latency, f)
      
     # write to CSV
+    design_power = CalculatePower() #assume the power is fixed
+    energy_list = [ [] for i in range(ss_len)]
     with open('FindLatency_results.csv','w') as f:
-        f.write('index, shift step, scale factor, latency(ms), face detected / total face\n') 
+        f.write('index, shift step, scale factor, latency(ms), energy(mJ), accuracy\n') 
         index = 0
         for i in range(ss_len):
             for j in range(sf_len):
@@ -165,21 +170,39 @@ def FindLatency(mi_shiftStep, mi_scaleFactor):
                 f.write(str(int(shiftStep_list[i][j]))+',')
                 f.write(str(round(scaleFactor_list[i][j],2))+',')
                 f.write(str(latency[i][j])+',')
+                energy = design_power * latency[i][j]/1000
+                energy_list[i].append(energy)
+                f.write(str(energy)+',')
                 if not mi_flag:
                     f.write(str(round(facedetected_list[i][j],3))+'\n')
                 else:
                     f.write('-\n')
                 index += 1
-                
+        
+    # write to json
+    with open('./json/latency','w') as f:
+        json.dump(latency, f)
+    with open('./json/energy','w') as f:
+        json.dump(energy_list, f)
+        
     if not mi_flag:
-        # Plot latency vs. face detected
+        # Plot latency vs. face detection accuracy
         latency_1d = sum( latency, [] )
         facedetected_1d = sum( facedetected_list, [] )
         plt.ion() #make the plt.show() non-blocking
         plt.plot(latency_1d, facedetected_1d,'.')
         plt.xlabel('Latency (ms)')
         plt.ylabel('Accuracy (Precision)')
-        plt.savefig('./latency_vs_facedetected.png', dpi=300)
+        plt.savefig('./latency_vs_accuracy.png', dpi=300)
+        plt.show()
+        
+        plt.clf()
+        # Plot energy vs. face detection accuracy
+        energy_1d = sum( energy_list, [] )
+        plt.plot(energy_1d, facedetected_1d,'.')
+        plt.xlabel('Energy (mJ)')
+        plt.ylabel('Accuracy (Precision)')
+        plt.savefig('./energy_vs_accuracy.png', dpi=300)
         plt.show()
         
 def DirectPlot():
@@ -187,15 +210,53 @@ def DirectPlot():
         facedetected = json.load(f)
     with open('./json/latency','r') as f:
         latency = json.load(f)
+    with open('./json/energy','r') as f:
+        energy = json.load(f)
         
     latency_1d = sum( latency, [] )
     facedetected_1d = sum( facedetected, [] )
+    energy_1d = sum( energy, [] )
     
     plt.plot(latency_1d, facedetected_1d,'.')
     plt.xlabel('Latency (ms)')
     plt.ylabel('Accuracy (Precision)')
-    plt.savefig('./latency_vs_facedetected.png', dpi=300)
+    plt.savefig('./latency_vs_accuracy.png', dpi=300)
     plt.show()
 
+    plt.plot(energy_1d, facedetected_1d,'.')
+    plt.xlabel('Energy (mJ)')
+    plt.ylabel('Accuracy (Precision)')
+    plt.savefig('./energy_vs_accuracy.png', dpi=300)
+    plt.show()
+
+# Returns Power [mW]
+def CalculatePower():
+    results = open('./hls/facedetect.CSV').read().splitlines()[1]
+    
+    #find DSP, RAM, and total Area & Power
+    mul9 = 0
+    mul18 = 0
+    mul27 = 0
+    auto_fnct = open('./hls/facedetect-auto.FCNT').read()
+    mult_content = re.findall(r'NAME\tmul\d+[\s\S]+AUTO',auto_fnct) #list contains info of multipliers
+    for cur_mult in mult_content:
+        mul_bw = int( re.findall(r'(?<=NAME\tmul)\d+',cur_mult)[0] ) #bitwidth
+        mul_num = int( re.findall(r'(?<=LIMIT\t)\d+',cur_mult)[0] ) #number of multipliers
+        if mul_bw <= 9:
+            mul9 = mul9 + mul_num
+        elif mul_bw <= 18:
+            mul18 = mul18 + mul_num
+        else:
+            mul27 = mul27 + mul_num
+            
+    alut_count = int( results.split(',')[0] )
+    reg_count = int( results.split(',')[3] )
+    mem_bits_count = int( results.split(',')[19] )
+    
+    cur_power = mul9 * DSP9_PWR + mul18 * DSP18_PWR + mul27 * DSP27_PWR + alut_count * ALUT_PWR + reg_count * REG_PWR + math.ceil(mem_bits_count/10000.0) * RAM10K_PWR # power (mW)
+    cur_power = cur_power * (2000/int(hls_cycle))        
+    return cur_power
+
+            
 if __name__ == "__main__":
     main(sys.argv[1:])
